@@ -11,7 +11,7 @@ except ModuleNotFoundError:
 try:
     from PyQt6 import QtCore, QtGui, QtWidgets
 except ModuleNotFoundError:
-    print("Не установлен PyQt6. Установите зависимости: pip install PyQt6 pyserial")
+    print("PyQt6 is not installed. Install dependencies: pip install PyQt6 pyserial")
     raise
 
 
@@ -44,7 +44,7 @@ class ReceiverThread(QtCore.QThread):
                 else:
                     self.msleep(20)
             except (OSError, serial.SerialException) as error:
-                self.error_occurred.emit(f"Ошибка приема данных: {error}")
+                self.error_occurred.emit(f"Data receive error: {error}")
                 break
 
     def stop(self):
@@ -57,7 +57,7 @@ class MessageInput(QtWidgets.QPlainTextEdit):
 
     def __init__(self):
         super().__init__()
-        self.setPlaceholderText("Введите сообщение и нажмите Enter для отправки")
+        self.setPlaceholderText("Type a message and press Enter to send")
 
     def keyPressEvent(self, event):
         if event.key() in (
@@ -74,13 +74,13 @@ class MessageInput(QtWidgets.QPlainTextEdit):
 
 
 class ComPortWindow(QtWidgets.QWidget):
-    # Возможные параметры COM-порта:
-    # baudrate: стандартные скорости, например 110, 300, 1200, 2400, 4800,
+    # Available COM port parameters:
+    # baudrate: standard speeds, for example 110, 300, 1200, 2400, 4800,
     # 9600, 19200, 38400, 57600, 115200.
     # bytesize: 5, 6, 7, 8.
     # parity: none, even, odd, mark, space.
     # stopbits: 1, 1.5, 2.
-    # В варианте 2 пользователь выбирает bytesize, остальные параметры фиксированы.
+    # Variant 2 requires choosing bytesize; the other parameters are fixed.
 
     def __init__(self):
         super().__init__()
@@ -88,7 +88,7 @@ class ComPortWindow(QtWidgets.QWidget):
         self.receiver = None
         self.sent_characters = 0
 
-        self.setWindowTitle("Лабораторная работа 1: COM-порт")
+        self.setWindowTitle("Lab 1: COM Port")
         self.resize(900, 620)
 
         self.create_widgets()
@@ -124,24 +124,24 @@ class ComPortWindow(QtWidgets.QWidget):
     def create_layout(self):
         main_layout = QtWidgets.QVBoxLayout(self)
 
-        control_group = QtWidgets.QGroupBox("Окно управления")
+        control_group = QtWidgets.QGroupBox("Control Window")
         control_layout = QtWidgets.QFormLayout(control_group)
-        control_layout.addRow("COM-порт:", self.port_combo)
-        control_layout.addRow("Длина байта:", self.byte_size_combo)
+        control_layout.addRow("COM port:", self.port_combo)
+        control_layout.addRow("Byte size:", self.byte_size_combo)
 
         messages_layout = QtWidgets.QHBoxLayout()
-        input_group = QtWidgets.QGroupBox("Окно ввода")
+        input_group = QtWidgets.QGroupBox("Input Window")
         input_layout = QtWidgets.QVBoxLayout(input_group)
         input_layout.addWidget(self.input_text)
 
-        output_group = QtWidgets.QGroupBox("Окно вывода")
+        output_group = QtWidgets.QGroupBox("Output Window")
         output_layout = QtWidgets.QVBoxLayout(output_group)
         output_layout.addWidget(self.output_text)
 
         messages_layout.addWidget(input_group, 1)
         messages_layout.addWidget(output_group, 1)
 
-        status_group = QtWidgets.QGroupBox("Окно состояния")
+        status_group = QtWidgets.QGroupBox("Status Window")
         status_layout = QtWidgets.QVBoxLayout(status_group)
         status_layout.addWidget(self.status_text)
 
@@ -192,13 +192,13 @@ class ComPortWindow(QtWidgets.QWidget):
 
     def load_ports(self):
         if serial is None:
-            self.show_error("Не установлен pyserial. Установите зависимости: pip install PyQt6 pyserial")
+            self.show_error("pyserial is not installed. Install dependencies: pip install PyQt6 pyserial")
             return
 
         available_ports = [port.device for port in list_ports.comports()]
         self.port_combo.addItems(available_ports)
         if not available_ports:
-            self.write_status("COM-порты не найдены. Можно ввести номер порта вручную, например COM3.")
+            self.write_status("No COM ports found. You can enter the port manually, for example COM3.")
 
     def try_open_port(self):
         if self.serial_port is not None:
@@ -225,7 +225,7 @@ class ComPortWindow(QtWidgets.QWidget):
             )
         except serial.SerialException as error:
             self.serial_port = None
-            self.show_error(f"Не удалось открыть {port_name}: {error}")
+            self.show_error(f"Failed to open {port_name}: {error}")
             return
 
         self.port_combo.setEnabled(False)
@@ -233,12 +233,12 @@ class ComPortWindow(QtWidgets.QWidget):
         self.input_text.setEnabled(True)
         self.input_text.setFocus()
 
-        self.write_status(f"Открыт порт: {port_name}")
-        self.write_status(f"Скорость: {BAUD_RATE}")
-        self.write_status(f"Длина байта: {byte_size}")
-        self.write_status("Паритет: нет")
-        self.write_status("Стоп-биты: 1")
-        self.write_status("Передача: построчно после Enter")
+        self.write_status(f"Opened port: {port_name}")
+        self.write_status(f"Baud rate: {BAUD_RATE}")
+        self.write_status(f"Byte size: {byte_size}")
+        self.write_status("Parity: none")
+        self.write_status("Stop bits: 1")
+        self.write_status("Transmission: line by line after Enter")
 
         self.receiver = ReceiverThread(self.serial_port)
         self.receiver.data_received.connect(self.append_received_text)
@@ -247,16 +247,16 @@ class ComPortWindow(QtWidgets.QWidget):
 
     def send_message(self, message):
         if self.serial_port is None or not self.serial_port.is_open:
-            self.show_error("COM-порт не открыт.")
+            self.show_error("COM port is not open.")
             return
 
         try:
             for character in message:
                 self.serial_port.write(character.encode("utf-8"))
             self.sent_characters += len(message)
-            self.write_status(f"Отправлено сообщение: {message.rstrip()}")
+            self.write_status(f"Sent message: {message.rstrip()}")
         except (OSError, serial.SerialException) as error:
-            self.show_error(f"Ошибка отправки данных: {error}")
+            self.show_error(f"Data send error: {error}")
 
     def append_received_text(self, text):
         cursor = self.output_text.textCursor()
@@ -271,8 +271,8 @@ class ComPortWindow(QtWidgets.QWidget):
 
     def update_status_counter(self):
         lines = self.status_text.toPlainText().splitlines()
-        lines = [line for line in lines if not line.startswith("Передано символов:")]
-        lines.append(f"Передано символов: {self.sent_characters}")
+        lines = [line for line in lines if not line.startswith("Sent characters:")]
+        lines.append(f"Sent characters: {self.sent_characters}")
         self.status_text.setPlainText("\n".join(lines))
         self.status_text.moveCursor(QtGui.QTextCursor.MoveOperation.End)
 
@@ -281,7 +281,7 @@ class ComPortWindow(QtWidgets.QWidget):
 
     def show_error(self, message):
         self.write_status(message)
-        QtWidgets.QMessageBox.critical(self, "Ошибка", message)
+        QtWidgets.QMessageBox.critical(self, "Error", message)
 
     def closeEvent(self, event):
         if self.receiver is not None:
