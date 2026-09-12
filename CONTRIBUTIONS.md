@@ -74,13 +74,13 @@ git push -u origin lab1
 
 9. Создать Pull Request на GitHub:
 
-1. Открыть репозиторий на GitHub.
-2. Перейти во вкладку **Pull requests**.
-3. Нажать **New pull request**.
-4. Выбрать свою ветку как source branch.
-5. Выбрать `main` как target branch.
-6. Проверить список изменений.
-7. Нажать **Create pull request**.
+   - Открыть репозиторий на GitHub.
+   - Перейти во вкладку **Pull requests**.
+   - Нажать **New pull request**.
+   - Выбрать свою ветку как source branch.
+   - Выбрать `main` как target branch.
+   - Проверить список изменений.
+   - Нажать **Create pull request**.
 
 10. После принятия Pull Request переключиться обратно на `main`:
 
