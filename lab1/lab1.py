@@ -56,6 +56,10 @@ class ReceiverThread(QtCore.QThread):
 class MessageInput(QtWidgets.QPlainTextEdit):
     send_requested = QtCore.pyqtSignal(str)
 
+    def __init__(self):
+        super().__init__()
+        self.setPlaceholderText("Type a message and press Enter")
+
     def keyPressEvent(self, event):
         if event.key() in (
             QtCore.Qt.Key.Key_Return,
@@ -74,6 +78,10 @@ class HoverComboBox(QtWidgets.QComboBox):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMouseTracking(True)
+        self.view().setMouseTracking(True)
+        self.view().installEventFilter(self)
+        self.view().viewport().setMouseTracking(True)
+        self.view().viewport().installEventFilter(self)
 
     def setEditable(self, editable):
         super().setEditable(editable)
@@ -89,11 +97,17 @@ class HoverComboBox(QtWidgets.QComboBox):
             and event.type() == QtCore.QEvent.Type.Enter
         ):
             self.open_popup_on_hover()
+        elif event.type() == QtCore.QEvent.Type.Leave:
+            self.close_popup_if_pointer_outside()
         return super().eventFilter(watched, event)
 
     def enterEvent(self, event):
         super().enterEvent(event)
         self.open_popup_on_hover()
+
+    def leaveEvent(self, event):
+        super().leaveEvent(event)
+        self.close_popup_if_pointer_outside()
 
     def open_popup_on_hover(self):
         if self.isEnabled() and not self.view().isVisible():
@@ -102,6 +116,23 @@ class HoverComboBox(QtWidgets.QComboBox):
     def _show_popup(self):
         if self.isEnabled() and not self.view().isVisible():
             self.showPopup()
+
+    def close_popup_if_pointer_outside(self):
+        QtCore.QTimer.singleShot(60, self._hide_popup_if_pointer_outside)
+
+    def _hide_popup_if_pointer_outside(self):
+        if not self.view().isVisible():
+            return
+
+        cursor_position = QtGui.QCursor.pos()
+        combo_rect = QtCore.QRect(self.mapToGlobal(QtCore.QPoint(0, 0)), self.size())
+        popup_rect = QtCore.QRect(
+            self.view().mapToGlobal(QtCore.QPoint(0, 0)),
+            self.view().size(),
+        )
+
+        if not combo_rect.contains(cursor_position) and not popup_rect.contains(cursor_position):
+            self.hidePopup()
 
 
 class ComPortWindow(QtWidgets.QWidget):
@@ -118,9 +149,10 @@ class ComPortWindow(QtWidgets.QWidget):
         self.serial_port = None
         self.receiver = None
         self.sent_characters = 0
+        self.status_message = "Select COM port and byte size"
 
         self.setWindowTitle("Lab 1: COM Port")
-        self.resize(900, 560)
+        self.resize(960, 600)
 
         self.create_widgets()
         self.create_layout()
@@ -137,12 +169,12 @@ class ComPortWindow(QtWidgets.QWidget):
 
     def create_widgets(self):
         self.port_combo = HoverComboBox()
-        self.port_combo.addItem("")
 
         self.byte_size_combo = HoverComboBox()
         for byte_size in (5, 6, 7, 8):
             self.byte_size_combo.addItem(str(byte_size), byte_size)
         self.byte_size_combo.setCurrentIndex(-1)
+        self.byte_size_combo.setMaxVisibleItems(self.byte_size_combo.count())
 
         self.input_text = MessageInput()
 
@@ -150,38 +182,89 @@ class ComPortWindow(QtWidgets.QWidget):
         self.output_text.setReadOnly(True)
 
         self.status_label = QtWidgets.QLabel()
+        self.status_label.setObjectName("statusText")
+        self.status_label.setTextFormat(QtCore.Qt.TextFormat.RichText)
         self.status_label.setAlignment(
             QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter
         )
+        self.status_label.setWordWrap(True)
 
     def create_layout(self):
         main_layout = QtWidgets.QVBoxLayout(self)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(16)
 
-        control_group = QtWidgets.QGroupBox("Control")
-        control_layout = QtWidgets.QFormLayout(control_group)
-        control_layout.addRow("COM port:", self.port_combo)
-        control_layout.addRow("Byte size:", self.byte_size_combo)
+        control_panel = self.create_panel("Control")
+        control_grid = QtWidgets.QGridLayout()
+        control_grid.setHorizontalSpacing(16)
+        control_grid.setVerticalSpacing(8)
+
+        port_label = self.create_field_label("COM port")
+        byte_size_label = self.create_field_label("Byte size")
+
+        control_grid.addWidget(port_label, 0, 0)
+        control_grid.addWidget(byte_size_label, 0, 1)
+        control_grid.addWidget(self.port_combo, 1, 0)
+        control_grid.addWidget(self.byte_size_combo, 1, 1)
+        control_grid.setColumnStretch(0, 1)
+        control_grid.setColumnStretch(1, 1)
+        control_panel.layout().addLayout(control_grid)
+
+        status_panel = self.create_panel("Status")
+        status_panel.layout().setContentsMargins(14, 12, 14, 12)
+        status_panel.layout().setSpacing(6)
+        status_panel.setFixedHeight(150)
+        status_layout = status_panel.layout()
+        status_layout.addWidget(self.status_label)
+
+        top_layout = QtWidgets.QHBoxLayout()
+        top_layout.setSpacing(16)
+        top_layout.addWidget(
+            control_panel,
+            7,
+            alignment=QtCore.Qt.AlignmentFlag.AlignTop,
+        )
+        top_layout.addWidget(
+            status_panel,
+            3,
+            alignment=QtCore.Qt.AlignmentFlag.AlignTop,
+        )
 
         messages_layout = QtWidgets.QHBoxLayout()
+        messages_layout.setSpacing(16)
 
-        input_group = QtWidgets.QGroupBox("Input")
-        input_layout = QtWidgets.QVBoxLayout(input_group)
+        input_group = self.create_panel("Input")
+        input_layout = input_group.layout()
         input_layout.addWidget(self.input_text)
 
-        output_group = QtWidgets.QGroupBox("Output")
-        output_layout = QtWidgets.QVBoxLayout(output_group)
+        output_group = self.create_panel("Output")
+        output_layout = output_group.layout()
         output_layout.addWidget(self.output_text)
 
         messages_layout.addWidget(input_group, 1)
         messages_layout.addWidget(output_group, 1)
 
-        status_group = QtWidgets.QGroupBox("Status")
-        status_layout = QtWidgets.QVBoxLayout(status_group)
-        status_layout.addWidget(self.status_label)
-
-        main_layout.addWidget(control_group)
+        main_layout.addLayout(top_layout)
         main_layout.addLayout(messages_layout, 1)
-        main_layout.addWidget(status_group)
+
+    def create_panel(self, title):
+        panel = QtWidgets.QFrame()
+        panel.setObjectName("panel")
+
+        layout = QtWidgets.QVBoxLayout(panel)
+        layout.setContentsMargins(16, 14, 16, 16)
+        layout.setSpacing(10)
+
+        title_label = QtWidgets.QLabel(title)
+        title_label.setObjectName("sectionTitle")
+        layout.addWidget(title_label)
+
+        return panel
+
+    def create_field_label(self, text):
+        label = QtWidgets.QLabel(text)
+        label.setObjectName("fieldLabel")
+        return label
 
     def connect_signals(self):
         self.port_combo.activated.connect(self.try_open_port)
@@ -193,44 +276,67 @@ class ComPortWindow(QtWidgets.QWidget):
         self.setStyleSheet(
             f"""
             QWidget {{
-                background: #f4f6f8;
-                color: #1f2933;
+                background: #101418;
+                color: #ecfeff;
                 font-family: Segoe UI, Arial, sans-serif;
                 font-size: 14px;
             }}
-            QGroupBox {{
-                border: 1px solid #cbd5df;
-                border-radius: 4px;
-                margin-top: 12px;
-                padding: 12px;
-                background: #ffffff;
-                font-weight: 600;
+            QFrame#panel {{
+                background: #182026;
+                border: 1px solid #2f3d46;
+                border-radius: 10px;
             }}
-            QGroupBox::title {{
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 4px;
+            QLabel#sectionTitle {{
+                color: #ecfeff;
+                font-size: 15px;
+                font-weight: 700;
+                background: transparent;
+                border: none;
+            }}
+            QLabel#fieldLabel {{
+                color: #9fb7bd;
+                font-size: 12px;
+                font-weight: 600;
+                background: transparent;
+                border: none;
             }}
             QPlainTextEdit {{
-                border: 1px solid #aab7c4;
-                border-radius: 4px;
-                background: #ffffff;
-                padding: 6px;
+                border: 1px solid #2f3d46;
+                border-radius: 8px;
+                background: #0d1216;
+                color: #ecfeff;
+                padding: 10px;
+                selection-background-color: #0f766e;
+            }}
+            QPlainTextEdit:focus {{
+                border: 1px solid #2dd4bf;
             }}
             QComboBox {{
-                border: 1px solid #aab7c4;
-                border-radius: 4px;
-                background: #ffffff;
-                min-height: 28px;
-                padding-left: 6px;
-                padding-right: 28px;
+                border: 1px solid #2f3d46;
+                border-radius: 8px;
+                background: #0d1216;
+                color: #ecfeff;
+                min-height: 34px;
+                padding-left: 10px;
+                padding-right: 34px;
+            }}
+            QComboBox:hover {{
+                border: 1px solid #2dd4bf;
+                background: #132027;
+            }}
+            QComboBox:disabled {{
+                color: #6f858b;
+                background: #12191e;
+                border: 1px solid #25323a;
             }}
             QComboBox::drop-down {{
                 subcontrol-origin: border;
                 subcontrol-position: top right;
-                width: 28px;
-                border-left: 1px solid #aab7c4;
-                background: #e8eef3;
+                width: 32px;
+                border-left: 1px solid #2f3d46;
+                background: #17262d;
+                border-top-right-radius: 8px;
+                border-bottom-right-radius: 8px;
             }}
             QComboBox::down-arrow {{
                 image: url({arrow_path});
@@ -238,13 +344,19 @@ class ComPortWindow(QtWidgets.QWidget):
                 height: 8px;
             }}
             QComboBox QAbstractItemView {{
-                background: #ffffff;
-                color: #1f2933;
-                selection-background-color: #d9e2ec;
-                border: 1px solid #aab7c4;
+                background: #182026;
+                color: #ecfeff;
+                selection-background-color: #0f766e;
+                border: 1px solid #2f3d46;
+                outline: 0;
             }}
             QLabel {{
                 font-weight: 400;
+                background: transparent;
+            }}
+            QLabel#statusText {{
+                color: #ecfeff;
+                font-size: 12px;
             }}
             """
         )
@@ -256,6 +368,7 @@ class ComPortWindow(QtWidgets.QWidget):
 
         available_ports = [port.device for port in list_ports.comports()]
         self.port_combo.addItems(available_ports)
+        self.port_combo.setMaxVisibleItems(max(1, self.port_combo.count()))
         self.port_combo.setCurrentIndex(-1)
         if not available_ports:
             self.write_status("No COM ports found.")
@@ -295,6 +408,7 @@ class ComPortWindow(QtWidgets.QWidget):
         self.port_combo.setEnabled(False)
         self.byte_size_combo.setEnabled(False)
         self.input_text.setFocus()
+        self.write_status(f"Opened {port_name}")
 
         self.receiver = ReceiverThread(self.serial_port)
         self.receiver.data_received.connect(self.append_received_text)
@@ -310,6 +424,7 @@ class ComPortWindow(QtWidgets.QWidget):
             for character in message:
                 self.serial_port.write(character.encode("utf-8"))
             self.sent_characters += len(message)
+            self.write_status(f"Last sent: {len(message)} characters")
         except (OSError, serial.SerialException) as error:
             self.show_error(f"Data send error: {error}")
 
@@ -324,9 +439,52 @@ class ComPortWindow(QtWidgets.QWidget):
         self.show_error(message)
 
     def update_status_counter(self):
-        self.status_label.setText(f"Sent characters: {self.sent_characters}")
+        if self.serial_port is not None and self.serial_port.is_open:
+            self.set_status_rows(
+                [
+                    ("Номер порта", self.serial_port.port),
+                    ("Скорость", BAUD_RATE),
+                    ("Длина байта", self.serial_port.bytesize),
+                    ("Количество стоп-битов", 1),
+                    ("Проверка паритета", "none"),
+                    ("Отправлено символов", self.sent_characters),
+                ]
+            )
+            return
+
+        self.set_status_rows(
+            [
+                ("Номер порта", "не выбран"),
+                ("Скорость", BAUD_RATE),
+                ("Длина байта", "не выбрана"),
+                ("Количество стоп-битов", 1),
+                ("Проверка паритета", "none"),
+                ("Отправлено символов", self.sent_characters),
+            ]
+        )
+
+    def set_status_rows(self, rows):
+        row_html = "".join(
+            (
+                "<tr>"
+                f"<td style='color:#9fb7bd; padding:0 10px 1px 0;'>{label}</td>"
+                f"<td style='color:#ecfeff; padding:0 0 1px 0;'>{value}</td>"
+                "</tr>"
+            )
+            for label, value in rows
+        )
+        self.status_label.setText(
+            "<table cellspacing='0' cellpadding='0' style='font-size:12px;'>"
+            f"{row_html}"
+            "</table>"
+        )
+
+    def write_status(self, message):
+        self.status_message = message
+        self.update_status_counter()
 
     def show_error(self, message):
+        self.write_status(message)
         QtWidgets.QMessageBox.critical(self, "Error", message)
 
     def closeEvent(self, event):
