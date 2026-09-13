@@ -36,6 +36,9 @@ class ReceiverThread(QtCore.QThread):
     def run(self):
         while self._running:
             try:
+                if self.serial_port is None or not self.serial_port.is_open:
+                    break
+
                 waiting = self.serial_port.in_waiting
                 if waiting:
                     raw_data = self.serial_port.read(waiting)
@@ -45,7 +48,12 @@ class ReceiverThread(QtCore.QThread):
                 else:
                     self.msleep(20)
             except (OSError, serial.SerialException) as error:
-                self.error_occurred.emit(f"Data receive error: {error}")
+                if self._running:
+                    self.error_occurred.emit(f"Data receive error: {error}")
+                break
+            except Exception as error:
+                if self._running:
+                    self.error_occurred.emit(f"Unexpected receive error: {error}")
                 break
 
     def stop(self):
@@ -429,10 +437,10 @@ class ComPortWindow(QtWidgets.QWidget):
             self.show_error(f"Data send error: {error}")
 
     def append_received_text(self, text):
-        cursor = self.output_text.textCursor()
+        clean_text = text.replace("\r\n", "\n").replace("\r", "\n")
+        cursor = QtGui.QTextCursor(self.output_text.document())
         cursor.movePosition(QtGui.QTextCursor.MoveOperation.End)
-        cursor.insertText(text)
-        self.output_text.setTextCursor(cursor)
+        cursor.insertText(clean_text)
         self.output_text.ensureCursorVisible()
 
     def handle_receiver_error(self, message):
