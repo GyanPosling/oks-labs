@@ -185,7 +185,7 @@ class ComPortWindow(QtWidgets.QWidget):
         self.status_label.setObjectName("statusText")
         self.status_label.setTextFormat(QtCore.Qt.TextFormat.RichText)
         self.status_label.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter
+            QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignTop
         )
         self.status_label.setWordWrap(True)
 
@@ -210,10 +210,10 @@ class ComPortWindow(QtWidgets.QWidget):
         control_grid.setColumnStretch(1, 1)
         control_panel.layout().addLayout(control_grid)
 
-        status_panel = self.create_panel("Status")
-        status_panel.layout().setContentsMargins(14, 12, 14, 12)
-        status_panel.layout().setSpacing(6)
-        status_panel.setFixedHeight(150)
+        status_panel = self.create_panel("State")
+        status_panel.layout().setContentsMargins(14, 10, 14, 10)
+        status_panel.layout().setSpacing(4)
+        status_panel.setFixedHeight(92)
         status_layout = status_panel.layout()
         status_layout.addWidget(self.status_label)
 
@@ -439,45 +439,7 @@ class ComPortWindow(QtWidgets.QWidget):
         self.show_error(message)
 
     def update_status_counter(self):
-        if self.serial_port is not None and self.serial_port.is_open:
-            self.set_status_rows(
-                [
-                    ("Номер порта", self.serial_port.port),
-                    ("Скорость", BAUD_RATE),
-                    ("Длина байта", self.serial_port.bytesize),
-                    ("Количество стоп-битов", 1),
-                    ("Проверка паритета", "none"),
-                    ("Отправлено символов", self.sent_characters),
-                ]
-            )
-            return
-
-        self.set_status_rows(
-            [
-                ("Номер порта", "не выбран"),
-                ("Скорость", BAUD_RATE),
-                ("Длина байта", "не выбрана"),
-                ("Количество стоп-битов", 1),
-                ("Проверка паритета", "none"),
-                ("Отправлено символов", self.sent_characters),
-            ]
-        )
-
-    def set_status_rows(self, rows):
-        row_html = "".join(
-            (
-                "<tr>"
-                f"<td style='color:#9fb7bd; padding:0 10px 1px 0;'>{label}</td>"
-                f"<td style='color:#ecfeff; padding:0 0 1px 0;'>{value}</td>"
-                "</tr>"
-            )
-            for label, value in rows
-        )
-        self.status_label.setText(
-            "<table cellspacing='0' cellpadding='0' style='font-size:12px;'>"
-            f"{row_html}"
-            "</table>"
-        )
+        self.status_label.setText(f"Sent characters: {self.sent_characters}")
 
     def write_status(self, message):
         self.status_message = message
