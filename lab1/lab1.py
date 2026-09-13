@@ -1,5 +1,6 @@
 import codecs
 import sys
+from pathlib import Path
 
 try:
     import serial
@@ -55,10 +56,6 @@ class ReceiverThread(QtCore.QThread):
 class MessageInput(QtWidgets.QPlainTextEdit):
     send_requested = QtCore.pyqtSignal(str)
 
-    def __init__(self):
-        super().__init__()
-        self.setPlaceholderText("Type a message and press Enter to send")
-
     def keyPressEvent(self, event):
         if event.key() in (
             QtCore.Qt.Key.Key_Return,
@@ -71,6 +68,40 @@ class MessageInput(QtWidgets.QPlainTextEdit):
             return
 
         super().keyPressEvent(event)
+
+
+class HoverComboBox(QtWidgets.QComboBox):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMouseTracking(True)
+
+    def setEditable(self, editable):
+        super().setEditable(editable)
+        line_edit = self.lineEdit()
+        if editable and line_edit is not None:
+            line_edit.setMouseTracking(True)
+            line_edit.installEventFilter(self)
+
+    def eventFilter(self, watched, event):
+        if (
+            self.lineEdit() is not None
+            and watched is self.lineEdit()
+            and event.type() == QtCore.QEvent.Type.Enter
+        ):
+            self.open_popup_on_hover()
+        return super().eventFilter(watched, event)
+
+    def enterEvent(self, event):
+        super().enterEvent(event)
+        self.open_popup_on_hover()
+
+    def open_popup_on_hover(self):
+        if self.isEnabled() and not self.view().isVisible():
+            QtCore.QTimer.singleShot(0, self._show_popup)
+
+    def _show_popup(self):
+        if self.isEnabled() and not self.view().isVisible():
+            self.showPopup()
 
 
 class ComPortWindow(QtWidgets.QWidget):
@@ -89,104 +120,134 @@ class ComPortWindow(QtWidgets.QWidget):
         self.sent_characters = 0
 
         self.setWindowTitle("Lab 1: COM Port")
-        self.resize(900, 620)
+        self.resize(900, 560)
 
         self.create_widgets()
         self.create_layout()
-        self.connect_signals()
         self.apply_styles()
         self.load_ports()
+        self.connect_signals()
+        self.update_status_counter()
 
         self.status_timer = QtCore.QTimer(self)
         self.status_timer.timeout.connect(self.update_status_counter)
         self.status_timer.start(1000)
 
+        self.input_text.setFocus()
+
     def create_widgets(self):
-        self.port_combo = QtWidgets.QComboBox()
+        self.port_combo = HoverComboBox()
         self.port_combo.setEditable(True)
         self.port_combo.setInsertPolicy(QtWidgets.QComboBox.InsertPolicy.NoInsert)
-        self.port_combo.addItem("")
 
-        self.byte_size_combo = QtWidgets.QComboBox()
-        self.byte_size_combo.addItem("")
+        self.byte_size_combo = HoverComboBox()
         for byte_size in (5, 6, 7, 8):
             self.byte_size_combo.addItem(str(byte_size), byte_size)
+        self.byte_size_combo.setCurrentIndex(-1)
 
         self.input_text = MessageInput()
-        self.input_text.setEnabled(False)
 
         self.output_text = QtWidgets.QPlainTextEdit()
         self.output_text.setReadOnly(True)
 
-        self.status_text = QtWidgets.QPlainTextEdit()
-        self.status_text.setReadOnly(True)
+        self.status_label = QtWidgets.QLabel()
+        self.status_label.setAlignment(
+            QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter
+        )
 
     def create_layout(self):
         main_layout = QtWidgets.QVBoxLayout(self)
 
-        control_group = QtWidgets.QGroupBox("Control Window")
+        control_group = QtWidgets.QGroupBox("Control")
         control_layout = QtWidgets.QFormLayout(control_group)
         control_layout.addRow("COM port:", self.port_combo)
         control_layout.addRow("Byte size:", self.byte_size_combo)
 
         messages_layout = QtWidgets.QHBoxLayout()
-        input_group = QtWidgets.QGroupBox("Input Window")
+
+        input_group = QtWidgets.QGroupBox("Input")
         input_layout = QtWidgets.QVBoxLayout(input_group)
         input_layout.addWidget(self.input_text)
 
-        output_group = QtWidgets.QGroupBox("Output Window")
+        output_group = QtWidgets.QGroupBox("Output")
         output_layout = QtWidgets.QVBoxLayout(output_group)
         output_layout.addWidget(self.output_text)
 
         messages_layout.addWidget(input_group, 1)
         messages_layout.addWidget(output_group, 1)
 
-        status_group = QtWidgets.QGroupBox("Status Window")
+        status_group = QtWidgets.QGroupBox("Status")
         status_layout = QtWidgets.QVBoxLayout(status_group)
-        status_layout.addWidget(self.status_text)
+        status_layout.addWidget(self.status_label)
 
         main_layout.addWidget(control_group)
         main_layout.addLayout(messages_layout, 1)
-        main_layout.addWidget(status_group, 1)
+        main_layout.addWidget(status_group)
 
     def connect_signals(self):
-        self.port_combo.currentTextChanged.connect(self.try_open_port)
+        self.port_combo.activated.connect(self.try_open_port)
         self.port_combo.lineEdit().editingFinished.connect(self.try_open_port)
         self.byte_size_combo.currentIndexChanged.connect(self.try_open_port)
         self.input_text.send_requested.connect(self.send_message)
 
     def apply_styles(self):
+        arrow_path = Path(__file__).resolve().parent.joinpath("down-arrow.svg").as_posix()
         self.setStyleSheet(
-            """
-            QWidget {
+            f"""
+            QWidget {{
                 background: #f4f6f8;
                 color: #1f2933;
                 font-family: Segoe UI, Arial, sans-serif;
                 font-size: 14px;
-            }
-            QGroupBox {
+            }}
+            QGroupBox {{
                 border: 1px solid #cbd5df;
-                border-radius: 6px;
+                border-radius: 4px;
                 margin-top: 12px;
                 padding: 12px;
                 background: #ffffff;
                 font-weight: 600;
-            }
-            QGroupBox::title {
+            }}
+            QGroupBox::title {{
                 subcontrol-origin: margin;
                 left: 10px;
                 padding: 0 4px;
-            }
-            QComboBox, QPlainTextEdit {
+            }}
+            QPlainTextEdit {{
                 border: 1px solid #aab7c4;
                 border-radius: 4px;
                 background: #ffffff;
                 padding: 6px;
-            }
-            QPlainTextEdit:disabled {
-                background: #eef2f6;
-                color: #6b7785;
-            }
+            }}
+            QComboBox {{
+                border: 1px solid #aab7c4;
+                border-radius: 4px;
+                background: #ffffff;
+                min-height: 28px;
+                padding-left: 6px;
+                padding-right: 28px;
+            }}
+            QComboBox::drop-down {{
+                subcontrol-origin: border;
+                subcontrol-position: top right;
+                width: 28px;
+                border-left: 1px solid #aab7c4;
+                background: #e8eef3;
+            }}
+            QComboBox::down-arrow {{
+                image: url({arrow_path});
+                width: 12px;
+                height: 8px;
+            }}
+            QComboBox QAbstractItemView {{
+                background: #ffffff;
+                color: #1f2933;
+                selection-background-color: #d9e2ec;
+                border: 1px solid #aab7c4;
+            }}
+            QLabel {{
+                font-weight: 400;
+            }}
             """
         )
 
@@ -197,8 +258,7 @@ class ComPortWindow(QtWidgets.QWidget):
 
         available_ports = [port.device for port in list_ports.comports()]
         self.port_combo.addItems(available_ports)
-        if not available_ports:
-            self.write_status("No COM ports found. You can enter the port manually, for example COM3.")
+        self.port_combo.setCurrentIndex(-1)
 
     def try_open_port(self):
         if self.serial_port is not None:
@@ -213,6 +273,10 @@ class ComPortWindow(QtWidgets.QWidget):
         self.open_port(port_name, byte_size)
 
     def open_port(self, port_name, byte_size):
+        if serial is None:
+            self.show_error("pyserial is not installed. Install dependencies: pip install PyQt6 pyserial")
+            return
+
         try:
             self.serial_port = serial.Serial(
                 port=port_name,
@@ -230,15 +294,7 @@ class ComPortWindow(QtWidgets.QWidget):
 
         self.port_combo.setEnabled(False)
         self.byte_size_combo.setEnabled(False)
-        self.input_text.setEnabled(True)
         self.input_text.setFocus()
-
-        self.write_status(f"Opened port: {port_name}")
-        self.write_status(f"Baud rate: {BAUD_RATE}")
-        self.write_status(f"Byte size: {byte_size}")
-        self.write_status("Parity: none")
-        self.write_status("Stop bits: 1")
-        self.write_status("Transmission: line by line after Enter")
 
         self.receiver = ReceiverThread(self.serial_port)
         self.receiver.data_received.connect(self.append_received_text)
@@ -254,7 +310,6 @@ class ComPortWindow(QtWidgets.QWidget):
             for character in message:
                 self.serial_port.write(character.encode("utf-8"))
             self.sent_characters += len(message)
-            self.write_status(f"Sent message: {message.rstrip()}")
         except (OSError, serial.SerialException) as error:
             self.show_error(f"Data send error: {error}")
 
@@ -266,21 +321,12 @@ class ComPortWindow(QtWidgets.QWidget):
         self.output_text.ensureCursorVisible()
 
     def handle_receiver_error(self, message):
-        self.write_status(message)
-        self.input_text.setEnabled(False)
+        self.show_error(message)
 
     def update_status_counter(self):
-        lines = self.status_text.toPlainText().splitlines()
-        lines = [line for line in lines if not line.startswith("Sent characters:")]
-        lines.append(f"Sent characters: {self.sent_characters}")
-        self.status_text.setPlainText("\n".join(lines))
-        self.status_text.moveCursor(QtGui.QTextCursor.MoveOperation.End)
-
-    def write_status(self, message):
-        self.status_text.appendPlainText(message)
+        self.status_label.setText(f"Sent characters: {self.sent_characters}")
 
     def show_error(self, message):
-        self.write_status(message)
         QtWidgets.QMessageBox.critical(self, "Error", message)
 
     def closeEvent(self, event):
