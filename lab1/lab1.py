@@ -408,7 +408,7 @@ class ComPortWindow(QtWidgets.QWidget):
                 timeout=TIMEOUT_SECONDS,
                 write_timeout=WRITE_TIMEOUT_SECONDS,
             )
-        except serial.SerialException as error:
+        except (serial.SerialException, OSError, ValueError) as error:
             self.serial_port = None
             self.show_error(f"Failed to open {port_name}: {error}")
             return
@@ -433,7 +433,7 @@ class ComPortWindow(QtWidgets.QWidget):
                 self.serial_port.write(character.encode("utf-8"))
             self.sent_characters += len(message)
             self.write_status(f"Last sent: {len(message)} characters")
-        except (OSError, serial.SerialException) as error:
+        except (OSError, serial.SerialException, UnicodeEncodeError, ValueError) as error:
             self.show_error(f"Data send error: {error}")
 
     def append_received_text(self, text):
