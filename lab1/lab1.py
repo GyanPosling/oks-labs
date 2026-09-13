@@ -137,8 +137,7 @@ class ComPortWindow(QtWidgets.QWidget):
 
     def create_widgets(self):
         self.port_combo = HoverComboBox()
-        self.port_combo.setEditable(True)
-        self.port_combo.setInsertPolicy(QtWidgets.QComboBox.InsertPolicy.NoInsert)
+        self.port_combo.addItem("")
 
         self.byte_size_combo = HoverComboBox()
         for byte_size in (5, 6, 7, 8):
@@ -186,7 +185,6 @@ class ComPortWindow(QtWidgets.QWidget):
 
     def connect_signals(self):
         self.port_combo.activated.connect(self.try_open_port)
-        self.port_combo.lineEdit().editingFinished.connect(self.try_open_port)
         self.byte_size_combo.currentIndexChanged.connect(self.try_open_port)
         self.input_text.send_requested.connect(self.send_message)
 
@@ -259,6 +257,8 @@ class ComPortWindow(QtWidgets.QWidget):
         available_ports = [port.device for port in list_ports.comports()]
         self.port_combo.addItems(available_ports)
         self.port_combo.setCurrentIndex(-1)
+        if not available_ports:
+            self.write_status("No COM ports found.")
 
     def try_open_port(self):
         if self.serial_port is not None:
