@@ -292,7 +292,6 @@ class ComPortWindow(QtWidgets.QWidget):
             QFrame#panel {{
                 background: #182026;
                 border: 1px solid #2f3d46;
-                border-radius: 10px;
             }}
             QLabel#sectionTitle {{
                 color: #ecfeff;
@@ -310,7 +309,6 @@ class ComPortWindow(QtWidgets.QWidget):
             }}
             QPlainTextEdit {{
                 border: 1px solid #2f3d46;
-                border-radius: 8px;
                 background: #0d1216;
                 color: #ecfeff;
                 padding: 10px;
@@ -321,7 +319,6 @@ class ComPortWindow(QtWidgets.QWidget):
             }}
             QComboBox {{
                 border: 1px solid #2f3d46;
-                border-radius: 8px;
                 background: #0d1216;
                 color: #ecfeff;
                 min-height: 34px;
@@ -343,8 +340,6 @@ class ComPortWindow(QtWidgets.QWidget):
                 width: 32px;
                 border-left: 1px solid #2f3d46;
                 background: #17262d;
-                border-top-right-radius: 8px;
-                border-bottom-right-radius: 8px;
             }}
             QComboBox::down-arrow {{
                 image: url({arrow_path});
