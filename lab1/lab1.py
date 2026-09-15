@@ -276,7 +276,7 @@ class ComPortWindow(QtWidgets.QWidget):
 
     def connect_signals(self):
         self.port_combo.activated.connect(self.try_open_port)
-        self.byte_size_combo.currentIndexChanged.connect(self.try_open_port)
+        self.byte_size_combo.currentIndexChanged.connect(self.handle_byte_size_changed)
         self.input_text.send_requested.connect(self.send_message)
 
     def apply_styles(self):
@@ -413,6 +413,17 @@ class ComPortWindow(QtWidgets.QWidget):
 
         self.open_port(port_name, byte_size)
 
+    def handle_byte_size_changed(self):
+        byte_size = self.byte_size_combo.currentData()
+        if byte_size is None:
+            return
+
+        if self.serial_port is None:
+            self.try_open_port()
+            return
+
+        self.update_byte_size(byte_size)
+
     def open_port(self, port_name, byte_size):
         if serial is None:
             self.show_error("pyserial is not installed. Install dependencies: pip install PyQt6 pyserial")
@@ -434,7 +445,6 @@ class ComPortWindow(QtWidgets.QWidget):
             return
 
         self.port_combo.setEnabled(False)
-        self.byte_size_combo.setEnabled(False)
         self.input_text.setFocus()
         self.write_status(f"Opened {port_name}")
 
@@ -442,6 +452,16 @@ class ComPortWindow(QtWidgets.QWidget):
         self.receiver.data_received.connect(self.append_received_text)
         self.receiver.error_occurred.connect(self.handle_receiver_error)
         self.receiver.start()
+
+    def update_byte_size(self, byte_size):
+        if self.serial_port is None or not self.serial_port.is_open:
+            return
+
+        try:
+            self.serial_port.bytesize = byte_size
+            self.write_status(f"Byte size changed to {byte_size}")
+        except (OSError, serial.SerialException, ValueError) as error:
+            self.show_error(f"Failed to change byte size: {error}")
 
     def send_message(self, message):
         if self.serial_port is None or not self.serial_port.is_open:
