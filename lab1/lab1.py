@@ -284,62 +284,80 @@ class ComPortWindow(QtWidgets.QWidget):
         self.setStyleSheet(
             f"""
             QWidget {{
-                background: #101418;
-                color: #ecfeff;
-                font-family: Segoe UI, Arial, sans-serif;
+                background: #d4d0c8;
+                color: #000000;
+                font-family: MS Sans Serif, Tahoma, Arial, sans-serif;
                 font-size: 14px;
             }}
             QFrame#panel {{
-                background: #182026;
-                border: 1px solid #2f3d46;
+                background: #c0c0c0;
+                border-top: 2px solid #f0f0f0;
+                border-left: 2px solid #f0f0f0;
+                border-right: 2px solid #808080;
+                border-bottom: 2px solid #808080;
             }}
             QLabel#sectionTitle {{
-                color: #ecfeff;
+                color: #000000;
                 font-size: 15px;
                 font-weight: 700;
                 background: transparent;
                 border: none;
             }}
             QLabel#fieldLabel {{
-                color: #9fb7bd;
+                color: #000000;
                 font-size: 12px;
                 font-weight: 600;
                 background: transparent;
                 border: none;
             }}
             QPlainTextEdit {{
-                border: 1px solid #2f3d46;
-                background: #0d1216;
-                color: #ecfeff;
+                border-top: 2px solid #808080;
+                border-left: 2px solid #808080;
+                border-right: 2px solid #f0f0f0;
+                border-bottom: 2px solid #f0f0f0;
+                background: #f5f5f5;
+                color: #000000;
                 padding: 10px;
-                selection-background-color: #0f766e;
+                selection-background-color: #0a246a;
             }}
             QPlainTextEdit:focus {{
-                border: 1px solid #2dd4bf;
+                border-top: 2px solid #404040;
+                border-left: 2px solid #404040;
+                border-right: 2px solid #f0f0f0;
+                border-bottom: 2px solid #f0f0f0;
             }}
             QComboBox {{
-                border: 1px solid #2f3d46;
-                background: #0d1216;
-                color: #ecfeff;
+                border-top: 2px solid #f0f0f0;
+                border-left: 2px solid #f0f0f0;
+                border-right: 2px solid #808080;
+                border-bottom: 2px solid #808080;
+                background: #f5f5f5;
+                color: #000000;
                 min-height: 34px;
                 padding-left: 10px;
                 padding-right: 34px;
             }}
             QComboBox:hover {{
-                border: 1px solid #2dd4bf;
-                background: #132027;
+                border-top: 2px solid #f0f0f0;
+                border-left: 2px solid #f0f0f0;
+                border-right: 2px solid #404040;
+                border-bottom: 2px solid #404040;
+                background: #f5f5f5;
             }}
             QComboBox:disabled {{
-                color: #6f858b;
-                background: #12191e;
-                border: 1px solid #25323a;
+                color: #808080;
+                background: #d4d0c8;
+                border-top: 2px solid #f0f0f0;
+                border-left: 2px solid #f0f0f0;
+                border-right: 2px solid #a0a0a0;
+                border-bottom: 2px solid #a0a0a0;
             }}
             QComboBox::drop-down {{
                 subcontrol-origin: border;
                 subcontrol-position: top right;
                 width: 32px;
-                border-left: 1px solid #2f3d46;
-                background: #17262d;
+                border-left: 2px solid #808080;
+                background: #c0c0c0;
             }}
             QComboBox::down-arrow {{
                 image: url({arrow_path});
@@ -347,18 +365,25 @@ class ComPortWindow(QtWidgets.QWidget):
                 height: 8px;
             }}
             QComboBox QAbstractItemView {{
-                background: #182026;
-                color: #ecfeff;
-                selection-background-color: #0f766e;
-                border: 1px solid #2f3d46;
+                background: #f5f5f5;
+                color: #000000;
+                selection-background-color: #0a246a;
+                border-top: 2px solid #808080;
+                border-left: 2px solid #808080;
+                border-right: 2px solid #f0f0f0;
+                border-bottom: 2px solid #f0f0f0;
                 outline: 0;
+            }}
+            QComboBox QAbstractItemView::item:hover {{
+                background: #d0d0d0;
+                color: #000000;
             }}
             QLabel {{
                 font-weight: 400;
                 background: transparent;
             }}
             QLabel#statusText {{
-                color: #ecfeff;
+                color: #000000;
                 font-size: 12px;
             }}
             """
