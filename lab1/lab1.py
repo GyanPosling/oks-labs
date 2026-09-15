@@ -356,7 +356,10 @@ class ComPortWindow(QtWidgets.QWidget):
                 subcontrol-origin: border;
                 subcontrol-position: top right;
                 width: 32px;
-                border-left: 2px solid #808080;
+                border-top: 2px solid #707070;
+                border-left: 2px solid #606060;
+                border-right: 2px solid #404040;
+                border-bottom: 2px solid #404040;
                 background: #c0c0c0;
             }}
             QComboBox::down-arrow {{
